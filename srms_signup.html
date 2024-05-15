@@ -6,7 +6,7 @@
   <title>SRMS</title>
 </head>
 
-<body>
+<body onload="processError()">
   <div class="login-wrap">
     <div class="login-html">
       <input id="tab-1" type="radio" name="tab" class="sign-in" checked><label for="tab-1" class="tab">Sign In</label>
@@ -17,23 +17,19 @@
             <span id="wrong_password" style="color:red"></span>
             <div class="group">
               <label for="sign_user" class="label">Username</label>
-              <input id="sign_user" name="sign_user" type="text" class="input">
+              <input id="sign_user" name="sign_user" type="text" class="input" required onChange="document.getElementById('error_username').innerHTML=''">
+              <span id="error_username" style="color:red"></span>
             </div>
             <div class="group">
               <label for="sign_pass" class="label">Password</label>
-              <input id="sign_pass" name="sign_pass" type="password" class="input" data-type="password">
-            </div>
-            <div class="group">
-              <input id="check" type="checkbox" class="check" checked>
-              <label for="check"><span class="icon"></span> Keep me Signed in</label>
+              <input id="sign_pass" name="sign_pass" type="password" class="input" required data-type="password" onChange="document.getElementById('error_password').innerHTML=''">
+              <span id="error_password" style="color:red"></span>
+
             </div>
             <div class="group">
             <a href="./index.html"><button type="submit" class="button">Sign In</button></a>
             </div>
             <div class="hr"></div>
-            <div class="foot-lnk">
-              <a href="./forgot.html">Forgot Password?</a>
-            </div>
           </div>
         </form>
         <form id="signup-form" action="/srms_signup" method="post" >
@@ -55,7 +51,7 @@
           </div>
           <div class="group">
             <label for="email" class="label">Email Address</label>
-            <input id="email" name="email" type="text" class="input" required>
+            <input id="email" name="email" type="text" class="input"  required>
             <span id="email_err" style="color:red"></span>
           </div>
           <div class="group">
@@ -67,6 +63,21 @@
     </div>
   </div>
   <script>
+    function processError() {
+      const queryParamsString = window.location.search.substr(1);
+      const queryParams = queryParamsString
+        .split('&')
+        .reduce((accumulator, singleQueryParam) => {
+          const [key, value] = singleQueryParam.split('=');
+          accumulator[key] = decodeURIComponent(value);
+          return accumulator;
+        }, {});
+        if(queryParams.invalid_user) {
+          document.getElementById("error_username").innerHTML="Invalid Username";
+        } else  if(queryParams.invalid_pwd) {
+          document.getElementById("error_password").innerHTML="Invalid password";
+        }
+    }
     function handleRepeat(){
       if (document.getElementById("pass").value!=document.getElementById("repeat_pass").value){
         document.getElementById("repeat_pass_err").innerHTML="Password doesn't match!";

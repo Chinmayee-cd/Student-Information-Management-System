@@ -3,14 +3,17 @@
     "jest": "^29.7.0"
   },
   "dependencies": {
+    "axios": "^1.6.8",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
     "express": "^4.19.2",
     "iconv-lite": "^0.5.2",
+    "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.6.1",
     "mongoose": "^8.3.4",
+    "node-request-interceptor": "^0.6.3",
     "nodemailer": "^6.9.13",
     "nodemon": "^3.1.0",
     "pure-react-carousel": "^1.30.1",

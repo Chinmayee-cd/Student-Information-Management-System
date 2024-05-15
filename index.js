@@ -2,9 +2,12 @@ var express = require("express")
 require('dotenv').config();
 var bodyParser = require("body-parser")
 var mongoose = require("mongoose")
-const nodemailer = require('nodemailer');
 const path = require('path');
 const app = express()
+const nodemailer=require('nodemailer');
+const jwt=require('jsonwebtoken');
+const axios = require('axios')
+
 app.set('view engine','ejs');
 app.set('views', path.join(__dirname, '/public/views'));
 const {MongoClient} = require('mongodb');
@@ -15,51 +18,14 @@ app.use(bodyParser.urlencoded({
     extended:true
 }))
 
-const UserSchema = new mongoose.Schema({
-    email: String,
-  });
+axios.interceptors.request.use(function(config){
+    console.log('Interceptor in place',config.method,config.url);
+    return config
+},function (error){
+    return Promise.reject(error);
+});
 
-const forgot_pass = mongoose.model('users', UserSchema);
 const Schema = mongoose.Schema;
-
-const transporter = nodemailer.createTransport({
-    port: 587,
-    secure: false,
-    service: process.env.EMAIL_SERVICE,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    debug: true,
-    logger: true,
-  });
-app.post('/forgot', async (req, res) => {
-    const  email = req.body.email;
-    try {
-      const user = await forgot_pass.findOne({"email":email});
-      if (!user) {
-        return res.status(404).send('No account found with that email.');
-      }
-      const token = require("crypto").randomBytes(20).toString('hex');
-      user.resetPasswordToken = token;
-      user.resetPasswordExpires = Date.now() + 3600000;
-      await user.save();
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Password Reset',
-        text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n
-               Please click on the following link, or paste this into your browser to complete the process within one hour of receiving it:\n\n
-               http://localhost:3000/reset/${token}\n\n
-               If you did not request this, please ignore this email and your password will remain unchanged.\n`,
-      };
-      await transporter.sendMail(mailOptions);
-      res.send('An email has been sent to ' + email + ' with further instructions.');
-    } catch (err) {
-      console.error(err);
-      res.status(500).send('Server error');
-    }
-  });
   
 const userSchema = new Schema({
     roll:{type:Number,required:true},
@@ -185,18 +151,79 @@ app.post("/srms_signin", async (req, res) => {
     });
     try {
         const user = await db.collection('users').findOne({ username:req.body.sign_user });
-        if(user){
+        if(user) {
             const result=req.body.sign_pass===user.pass;
             if(result){
             res.redirect('/index.html');}
             else{
-                res.redirect('./srms_signup.html');
+                res.redirect('./srms_signup.html?invalid_pwd=true');
+            }
+        } else {
+            res.redirect('./srms_signup.html?invalid_user=true');
         }
-    }
     } catch{
         res.send("wrong details")
     }
 });
+
+const forgot_schema = new mongoose.Schema({
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+  });
+  
+  const forgot_user = mongoose.model('users', forgot_schema);
+  async function sendEmail(service, email, password, to, subject, text) {
+    let transporter;
+    if (service === 'gmail') {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: email,
+          pass: password
+        }
+      });
+    } else if (service === 'outlook') {
+      transporter = nodemailer.createTransport({
+        host: "smtp.office365.com",
+        port: 587,
+        secure: false, // STARTTLS
+        auth: {
+          user: email,
+          pass: password
+        }
+      });
+    }
+    const mailOptions = {
+        from: email,
+        to: to,
+        subject: subject,
+        text: text
+      };
+    
+      await transporter.sendMail(mailOptions);
+    }
+    app.post('/forgot', async (req, res) => {
+        const { email } = req.body;
+        try {
+            // Find user by email
+            let user = await forgot_user.findOne({ email });
+            if (!user) {
+              return res.status(400).json({ msg: 'No account with that email exists' });
+            }
+            const token = jwt.sign({ id: user._id }, 'my-32-character-ultra-secure-and-ultra-long-secret', { expiresIn: '90d' });
+  
+      // Send email with token
+      await sendEmail('gmail', 'yourGmailEmail@gmail.com', 'yourGmailPassword', email, 'Password Reset', `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n
+               Please click on the following link, or paste this into your browser to complete the process within one hour of receiving it:\n\n
+               http://localhost:3000/reset/${token}\n\n
+               If you did not request this, please ignore this email and your password will remain unchanged.\n`);
+  
+      res.json({ msg: 'An email has been sent to your account.' });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server error');
+    }
+  });
 app.get("/attendance",async(req,res) =>{
     res.set({
         "Allow-Control-Allow-Origin": '*'
