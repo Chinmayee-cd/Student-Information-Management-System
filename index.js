@@ -5,26 +5,14 @@ var bodyParser = require("body-parser")
 var mongoose = require("mongoose")
 const path = require('path');
 const app = express()
-const nodemailer=require('nodemailer');
-const jwt=require('jsonwebtoken');
-const axios = require('axios')
 
 app.set('view engine','ejs');
 app.set('views', path.join(__dirname, '/public/views'));
-const {MongoClient} = require('mongodb');
-const client = new MongoClient('mongodb://localhost:27017/student_info');
 app.use(bodyParser.json())
 app.use(express.static('.'))
 app.use(bodyParser.urlencoded({
     extended:true
 }))
-
-axios.interceptors.request.use(function(config){
-    console.log('Interceptor in place',config.method,config.url);
-    return config
-},function (error){
-    return Promise.reject(error);
-});
 
 const Schema = mongoose.Schema;
   
@@ -144,12 +132,6 @@ app.get("/srms_signup.html",async(req,res) =>{
         "Allow-Control-Allow-Origin": '*'
 })})
 app.post("/srms_signin", async (req, res) => {
-    const user_name = req.body.sign_user;
-    const user_pass = req.body.sign_pass;
-    const userSchema = new mongoose.Schema({
-        sign_user: String,
-        sign_pass: String
-    });
     try {
         const user = await db.collection('users').findOne({ username:req.body.sign_user });
         if(user) {
@@ -166,65 +148,7 @@ app.post("/srms_signin", async (req, res) => {
         res.send("wrong details")
     }
 });
-
-const forgot_schema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-  });
-  
-  const forgot_user = mongoose.model('users', forgot_schema);
-  async function sendEmail(service, email, password, to, subject, text) {
-    let transporter;
-    if (service === 'gmail') {
-      transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: email,
-          pass: password
-        }
-      });
-    } else if (service === 'outlook') {
-      transporter = nodemailer.createTransport({
-        host: "smtp.office365.com",
-        port: 587,
-        secure: false, // STARTTLS
-        auth: {
-          user: email,
-          pass: password
-        }
-      });
-    }
-    const mailOptions = {
-        from: email,
-        to: to,
-        subject: subject,
-        text: text
-      };
-    
-      await transporter.sendMail(mailOptions);
-    }
-    app.post('/forgot', async (req, res) => {
-        const { email } = req.body;
-        try {
-            // Find user by email
-            let user = await forgot_user.findOne({ email });
-            if (!user) {
-              return res.status(400).json({ msg: 'No account with that email exists' });
-            }
-            const token = jwt.sign({ id: user._id }, 'my-32-character-ultra-secure-and-ultra-long-secret', { expiresIn: '90d' });
-  
-      // Send email with token
-      await sendEmail('gmail', 'yourGmailEmail@gmail.com', 'yourGmailPassword', email, 'Password Reset', `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n
-               Please click on the following link, or paste this into your browser to complete the process within one hour of receiving it:\n\n
-               http://localhost:3000/reset/${token}\n\n
-               If you did not request this, please ignore this email and your password will remain unchanged.\n`);
-  
-      res.json({ msg: 'An email has been sent to your account.' });
-    } catch (err) {
-      console.error(err.message);
-      res.status(500).send('Server error');
-    }
-  });
+ 
 app.get("/attendance",async(req,res) =>{
     res.set({
         "Allow-Control-Allow-Origin": '*'

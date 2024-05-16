@@ -17,6 +17,7 @@
     text-decoration: none;
     list-style-type: none;
     padding: 20px 15px;
+    margin-top:25px;
 }
 
 .nav-flex-row li a {
@@ -71,6 +72,7 @@
     display: block;
     border: 2px solid #ffffff;
     padding: 5px 10px;
+    margin-top:100px;
 }
 
 a.link-to-book:hover {
